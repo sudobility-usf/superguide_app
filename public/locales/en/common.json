@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Starter",
-    "tagline": "A template project demonstrating the Sudobility architecture pattern."
+    "name": "Superguide",
+    "tagline": "Your Intelligent Travel Companion"
   },
   "breadcrumbs": {
     "home": "Home",
@@ -23,16 +23,17 @@
     "logout": "Log Out"
   },
   "home": {
-    "title": "Starter App",
-    "description": "This is a template project demonstrating the Sudobility architecture pattern. It shows how to build a full-stack application with shared types, a Hono API, TanStack Query hooks, Zustand stores, and a React web app.",
-    "viewDocs": "View Documentation",
-    "viewHistories": "View Histories",
-    "feature1Title": "Shared Types",
-    "feature1Desc": "TypeScript type definitions shared between frontend and backend for type safety across the stack.",
-    "feature2Title": "TanStack Query",
-    "feature2Desc": "Automatic caching, cache invalidation, and background refetching with TanStack Query hooks.",
-    "feature3Title": "Zustand Stores",
-    "feature3Desc": "Lightweight state management with Zustand for offline cache and business logic."
+    "title": "Superguide: Your Intelligent Travel Companion",
+    "description": "Planning the perfect trip often feels like an impossible puzzle. Travelers juggle countless factors across dozens of tabs and apps, leading to frustration and suboptimal itineraries. Superguide transforms this chaos into a smart, personalized itinerary—automatically.",
+    "tagline": "Tell us when, who, and what you love. Superguide handles the rest.",
+    "viewDocs": "Get Started",
+    "viewHistories": "View My Trips",
+    "feature1Title": "Smart AI Planning",
+    "feature1Desc": "Attractions intelligently grouped by proximity, with high-quality eateries naturally integrated into your routes—no manual research needed.",
+    "feature2Title": "Season-Aware",
+    "feature2Desc": "Many attractions offer vastly different experiences depending on the time of year. Superguide factors in seasonality so you never miss the best version of a destination.",
+    "feature3Title": "Built for Groups",
+    "feature3Desc": "Balancing the desires of foodies, sightseers, and budget travelers within a group? Superguide finds the perfect plan for everyone."
   },
   "docs": {
     "title": "Documentation"

@@ -1,14 +1,16 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SudobilityAppWithFirebaseAuth } from '@sudobility/building_blocks/firebase';
-import { LanguageValidator, PerformancePanel } from '@sudobility/components';
+import { LanguageValidator } from '@sudobility/components';
 import { isLanguageSupported, CONSTANTS } from './config/constants';
 import i18n from './i18n';
 import { useDocumentLanguage } from './hooks/useDocumentLanguage';
 import { AuthProviderWrapper } from './components/providers/AuthProviderWrapper';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-const HomePage = lazy(() => import('./pages/HomePage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const GetStartedPage = lazy(() => import('./pages/GetStartedPage'));
+const MyTripPage = lazy(() => import('./pages/MyTrip'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DocsPage = lazy(() => import('./pages/DocsPage'));
 const HistoriesPage = lazy(() => import('./pages/HistoriesPage'));
@@ -36,16 +38,6 @@ function DocumentLanguageSync({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-// Stable reference to prevent infinite re-renders
-const PERFORMANCE_API_PATTERNS = ['/api/'];
-
-function PerformancePanelComponent() {
-  if (import.meta.env.VITE_SHOW_PERFORMANCE_MONITOR !== 'true') {
-    return null;
-  }
-  return <PerformancePanel enabled={true} position="bottom-right" apiPatterns={PERFORMANCE_API_PATTERNS} />;
-}
-
 function AppRoutes() {
   return (
     <DocumentLanguageSync>
@@ -63,8 +55,10 @@ function AppRoutes() {
                 />
               }
             >
-              <Route index element={<HomePage />} />
+              <Route index element={<LandingPage />} />
               <Route path="login" element={<LoginPage />} />
+              <Route path="get-started" element={<GetStartedPage />} />
+              <Route path="my-trip" element={<MyTripPage />} />
               <Route path="docs" element={<DocsPage />} />
               <Route
                 path="histories"
@@ -88,7 +82,6 @@ function AppRoutes() {
             </Route>
             <Route path="*" element={<LanguageRedirect />} />
           </Routes>
-          <PerformancePanelComponent />
         </Suspense>
       </ErrorBoundary>
     </DocumentLanguageSync>
