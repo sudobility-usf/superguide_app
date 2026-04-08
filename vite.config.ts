@@ -11,7 +11,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   server: {
-    port: 5130,
+    port: 5128,
   },
   resolve: {
     dedupe: [
@@ -21,6 +21,9 @@ export default defineConfig({
       "react-helmet-async",
       "@sudobility/components",
       "@sudobility/building_blocks",
+      "@sudobility/superguide_client",
+      "@sudobility/superguide_types",
+      "zustand",
     ],
     alias: {
       react: path.resolve(__dirname, "node_modules/react"),
