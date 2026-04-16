@@ -6,7 +6,7 @@
   "breadcrumbs": {
     "home": "Home",
     "docs": "Documentation",
-    "histories": "Histories",
+    "histories": "My Trips",
     "settings": "Settings",
     "sitemap": "Sitemap",
     "login": "Log In",
@@ -16,7 +16,7 @@
   "nav": {
     "home": "Home",
     "docs": "Documentation",
-    "histories": "Histories",
+    "histories": "My Trips",
     "settings": "Settings",
     "sitemap": "Sitemap",
     "login": "Log In",
@@ -39,13 +39,13 @@
     "title": "Documentation"
   },
   "histories": {
-    "title": "Histories",
-    "loginPrompt": "Log in to view and manage your histories.",
-    "add": "Add History",
+    "title": "My Trips",
+    "loginPrompt": "Sign in to see the trips you've generated.",
+    "add": "Plan a Trip",
     "create": "Create",
-    "empty": "No histories yet. Add your first one!",
-    "detail": "History Detail",
-    "notFound": "History not found.",
+    "empty": "No trips yet. Plan your first one!",
+    "detail": "Trip",
+    "notFound": "Trip not found.",
     "datetime": "Date & Time",
     "value": "Value",
     "createdAt": "Created At",

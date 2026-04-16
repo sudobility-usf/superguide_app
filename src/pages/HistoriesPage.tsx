@@ -1,235 +1,175 @@
-import { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useMemo } from 'react';
 import { useAuthStatus } from '@sudobility/auth-components';
 import { useApi } from '@sudobility/building_blocks/firebase';
-import { useHistoriesManager } from '@sudobility/superguide_lib';
+import { useSavedTripsManager } from '@sudobility/superguide_lib';
+import { useNavigate, useParams } from 'react-router-dom';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import LocalizedLink from '../components/layout/LocalizedLink';
-import { formatDateTime } from '../utils/formatDateTime';
+import type { Trip } from '@sudobility/superguide_types';
 
 /**
- * Page displaying the user's history entries with stats, a creation form,
- * and a list of individual history records. Requires authentication.
+ * My Trips — lists saved trips for the authenticated user. Clicking one
+ * navigates to `/my-trip` with the stored itinerary as router state, so the
+ * existing MyTrip calendar view renders without modification.
  */
 export default function HistoriesPage() {
-  const { t, i18n } = useTranslation('common');
   const { user } = useAuthStatus();
   const { networkClient, baseUrl, token } = useApi();
+  const { lang } = useParams<{ lang: string }>();
+  const navigate = useNavigate();
 
-  const { histories, total, percentage, isLoading, error, createHistory } = useHistoriesManager({
+  const { trips, isLoading, error, deleteTrip } = useSavedTripsManager({
     baseUrl,
     networkClient,
     userId: user?.uid ?? null,
     token: token ?? null,
   });
 
-  const [showForm, setShowForm] = useState(false);
-  const [datetime, setDatetime] = useState('');
-  const [value, setValue] = useState('');
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  /** Sum of all user history values, computed once per histories change. */
-  const userTotal = useMemo(() => histories.reduce((sum, h) => sum + h.value, 0), [histories]);
+  const sortedTrips = useMemo(
+    () =>
+      [...trips].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
+    [trips]
+  );
 
   if (!user) {
     return (
       <ScreenContainer>
         <div className="container-app px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h1 className="text-2xl font-bold text-theme-text-primary mb-4">
-            {t('histories.title')}
+          <h1 className="text-3xl font-bold mb-3" style={{ color: '#2A1F0E' }}>
+            My Trips
           </h1>
-          <p className="text-theme-text-secondary mb-6">{t('histories.loginPrompt')}</p>
-          <LocalizedLink
-            to="/login"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            {t('nav.login')}
+          <p className="text-sm mb-8" style={{ color: '#A89070' }}>
+            Sign in to see the trips you've generated.
+          </p>
+          <LocalizedLink to="/login">
+            <button className="sg-btn px-8 py-3.5 text-sm">Sign In</button>
           </LocalizedLink>
         </div>
       </ScreenContainer>
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleOpen = (trip: Trip) => {
+    navigate(`/${lang ?? 'en'}/my-trip`, {
+      state: { itin: trip.itin, tripLocation: trip.location },
+    });
+  };
+
+  const handleDelete = async (e: React.MouseEvent, trip: Trip) => {
+    e.stopPropagation();
     e.preventDefault();
-    setSubmitError(null);
-
-    if (!datetime || !value) return;
-
-    const numericValue = Number(value);
-    if (Number.isNaN(numericValue) || numericValue <= 0) {
-      setSubmitError('Value must be a positive number.');
+    if (!window.confirm(`Remove "${trip.location}" from your saved trips?`))
       return;
-    }
-
-    const parsedDate = new Date(datetime);
-    if (Number.isNaN(parsedDate.getTime())) {
-      setSubmitError('Please enter a valid date and time.');
-      return;
-    }
-
     try {
-      setIsSubmitting(true);
-      await createHistory({
-        datetime: parsedDate.toISOString(),
-        value: numericValue,
-      });
-      setDatetime('');
-      setValue('');
-      setShowForm(false);
+      await deleteTrip(trip.id);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create history entry.';
-      setSubmitError(message);
-    } finally {
-      setIsSubmitting(false);
+      window.alert(err instanceof Error ? err.message : 'Failed to delete.');
     }
   };
 
-  /** Combined error message from the manager hook or local submit error. */
-  const displayError = submitError ?? error;
-
   return (
     <ScreenContainer>
-      <div className="container-app px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-theme-text-primary">{t('histories.title')}</h1>
-          <button
-            onClick={() => {
-              setShowForm(!showForm);
-              setSubmitError(null);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-            aria-expanded={showForm}
-            aria-controls="history-form"
-          >
-            {showForm ? t('common.cancel') : t('histories.add')}
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div
-          className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6"
-          role="region"
-          aria-label="History statistics"
-        >
-          <div className="p-4 rounded-lg border border-theme-border">
-            <p className="text-sm text-theme-text-tertiary">{t('histories.yourTotal')}</p>
-            <p className="text-2xl font-bold text-theme-text-primary">{userTotal.toFixed(2)}</p>
+      <div className="container-app px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-1" style={{ color: '#2A1F0E' }}>
+              My Trips
+            </h1>
+            <p className="text-sm" style={{ color: '#A89070' }}>
+              Trips you've generated
+            </p>
           </div>
-          <div className="p-4 rounded-lg border border-theme-border">
-            <p className="text-sm text-theme-text-tertiary">{t('histories.globalTotal')}</p>
-            <p className="text-2xl font-bold text-theme-text-primary">{total.toFixed(2)}</p>
-          </div>
-          <div className="p-4 rounded-lg border border-theme-border">
-            <p className="text-sm text-theme-text-tertiary">{t('histories.percentage')}</p>
-            <p className="text-2xl font-bold text-blue-600">{percentage.toFixed(1)}%</p>
-          </div>
-        </div>
 
-        {/* Add Form */}
-        {showForm && (
-          <form
-            id="history-form"
-            onSubmit={handleSubmit}
-            className="mb-6 p-4 rounded-lg border border-theme-border"
-            aria-label="Create history entry"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="history-datetime"
-                  className="block text-sm font-medium text-theme-text-secondary mb-1"
-                >
-                  {t('histories.datetime')}
-                </label>
-                <input
-                  id="history-datetime"
-                  type="datetime-local"
-                  value={datetime}
-                  onChange={e => setDatetime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-theme-border bg-theme-bg-primary text-theme-text-primary"
-                  required
-                  aria-required="true"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="history-value"
-                  className="block text-sm font-medium text-theme-text-secondary mb-1"
-                >
-                  {t('histories.value')}
-                </label>
-                <input
-                  id="history-value"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={value}
-                  onChange={e => setValue(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md border border-theme-border bg-theme-bg-primary text-theme-text-primary"
-                  required
-                  aria-required="true"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-busy={isSubmitting}
-            >
-              {isSubmitting ? t('common.loading', 'Loading...') : t('histories.create')}
-            </button>
-          </form>
-        )}
-
-        {/* Error */}
-        {displayError && (
-          <div
-            role="alert"
-            className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-sm"
-          >
-            {displayError}
-          </div>
-        )}
-
-        {/* Loading */}
-        {isLoading && histories.length === 0 && (
-          <div className="text-center py-8">
+          {error && (
             <div
-              role="status"
-              aria-label="Loading histories"
-              className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
-            />
-          </div>
-        )}
+              className="sg-card p-4 mb-4 text-center"
+              style={{ borderColor: 'rgba(192,80,80,0.25)' }}
+            >
+              <p className="text-sm" style={{ color: '#B05050' }}>
+                {error}
+              </p>
+            </div>
+          )}
 
-        {/* Histories List */}
-        {histories.length === 0 && !isLoading ? (
-          <p className="text-center text-theme-text-tertiary py-8">{t('histories.empty')}</p>
-        ) : (
-          <div className="space-y-2" role="list" aria-label="History entries">
-            {histories.map(history => (
-              <LocalizedLink
-                key={history.id}
-                to={`/histories/${history.id}`}
-                className="block p-4 rounded-lg border border-theme-border hover:bg-theme-hover-bg transition-colors"
-                role="listitem"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-theme-text-secondary text-sm">
-                    {formatDateTime(history.datetime, i18n.language)}
-                  </span>
-                  <span className="text-lg font-semibold text-theme-text-primary">
-                    {history.value.toFixed(2)}
-                  </span>
-                </div>
+          {isLoading && sortedTrips.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-sm" style={{ color: '#A89070' }}>
+                Loading…
+              </p>
+            </div>
+          ) : sortedTrips.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-sm mb-6" style={{ color: '#A89070' }}>
+                No trips yet.
+              </p>
+              <LocalizedLink to="/get-started">
+                <button className="sg-btn px-8 py-3.5 text-sm">
+                  Plan a Trip
+                </button>
               </LocalizedLink>
-            ))}
-          </div>
-        )}
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {sortedTrips.map(trip => {
+                const days = trip.itin.length;
+                const stops = trip.itin.reduce(
+                  (sum, d) => sum + (d.schedule?.length ?? 0),
+                  0
+                );
+                const range = `${formatDay(trip.start_date)} – ${formatDay(trip.end_date)}`;
+                return (
+                  <li key={trip.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpen(trip)}
+                      className="sg-card w-full text-left p-5 transition-transform hover:scale-[1.01]"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="flex items-center justify-between gap-4 mb-1">
+                        <span
+                          className="text-lg font-semibold truncate"
+                          style={{ color: '#2A1F0E' }}
+                        >
+                          {trip.location}
+                        </span>
+                        <span
+                          className="text-xs font-semibold shrink-0"
+                          style={{ color: '#7A6A50' }}
+                        >
+                          {range}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-xs" style={{ color: '#A89070' }}>
+                          {days} {days === 1 ? 'day' : 'days'} · {stops} stops
+                        </span>
+                        <button
+                          type="button"
+                          onClick={e => handleDelete(e, trip)}
+                          className="text-xs font-medium"
+                          style={{ color: '#B05050', cursor: 'pointer' }}
+                          aria-label={`Delete trip to ${trip.location}`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </ScreenContainer>
   );
+}
+
+function formatDay(d: string): string {
+  const date = new Date(`${d}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return d;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
