@@ -4,6 +4,8 @@ import { DayPicker, type DateRange } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import { useApi } from '@sudobility/building_blocks/firebase';
+import { useAuthStatus } from '@sudobility/auth-components';
+import { useTripsManager, useSavedTripsManager } from '@sudobility/superguide_lib';
 
 interface PlaceSuggestion {
   display_name: string;
@@ -81,43 +83,54 @@ function LocationAutocomplete({ value, onChange }: { value: string; onChange: (v
 export default function GetStartedPage() {
   const [location, setLocation] = useState('');
   const [range, setRange] = useState<DateRange | undefined>();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
-  const { baseUrl } = useApi();
+  const { baseUrl, networkClient, token } = useApi();
+  const { user } = useAuthStatus();
+  const { generateTrip, isGenerating, error: managerError } = useTripsManager({
+    baseUrl,
+    networkClient,
+  });
+  const { saveTrip } = useSavedTripsManager({
+    baseUrl,
+    networkClient,
+    userId: user?.uid ?? null,
+    token: token ?? null,
+    autoFetch: false,
+  });
 
   const numDays = range?.from && range?.to
     ? Math.round((range.to.getTime() - range.from.getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
+  const loading = isGenerating;
+  const error = submitError ?? managerError ?? null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!range?.from || !range?.to) return;
-    setLoading(true);
-    setError(null);
+    setSubmitError(null);
     try {
-      const res = await fetch(`${baseUrl}/api/v1/trips/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location,
-          start_date: range.from.toISOString().split('T')[0],
-          end_date: range.to.toISOString().split('T')[0],
-        }),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error || `${res.status} ${res.statusText}`);
+      const request = {
+        location,
+        start_date: range.from.toISOString().split('T')[0],
+        end_date: range.to.toISOString().split('T')[0],
+      };
+      const itin = await generateTrip(request);
+      // Best-effort persist for signed-in users.
+      if (user && token) {
+        try {
+          await saveTrip({ ...request, itin });
+        } catch {
+          /* opportunistic — swallow */
+        }
       }
-      const data = await res.json();
       navigate(`/${lang ?? 'en'}/my-trip`, {
-        state: { itin: data.data.itin, tripLocation: location },
+        state: { itin, tripLocation: location },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
+      setSubmitError(err instanceof Error ? err.message : 'Something went wrong');
     }
   };
 
