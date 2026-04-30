@@ -1,9 +1,89 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { ScheduleItem, ItinDay } from '@sudobility/superguide_types';
 import { parseTime, formatTime12, formatHour } from '@sudobility/superguide_lib';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import TransitMap from '../components/TransitMap';
+
+// ── Calendar helpers ─────────────────────────────────────────
+
+function parseEventDates(date: string, startTime: string, endTime: string) {
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  const start = new Date(`${date}T00:00:00`);
+  start.setHours(sh, sm, 0, 0);
+  const end = new Date(`${date}T00:00:00`);
+  end.setHours(eh, em, 0, 0);
+  if (end <= start) end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+function fmtIso(d: Date) {
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z/, 'Z');
+}
+
+function buildGoogleCalendarUrl(item: ScheduleItem, date: string): string {
+  const { start, end } = parseEventDates(date, item.start_time, item.end_time);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: item.name,
+    dates: `${fmtIso(start)}/${fmtIso(end)}`,
+    location: item.location,
+    ...(item.type === 'restaurant' && item.meal ? { details: `${item.meal} stop` } : {}),
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function buildIcs(itin: ItinDay[], tripLocation: string): string {
+  const stamp = fmtIso(new Date());
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Superguide//EN',
+    `X-WR-CALNAME:${tripLocation}`,
+  ];
+  for (const day of itin) {
+    for (const item of day.schedule) {
+      const { start, end } = parseEventDates(day.date, item.start_time, item.end_time);
+      const uid = `${day.date}-${item.start_time.replace(':', '')}-${Math.random().toString(36).slice(2)}@superguide`;
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${fmtIso(start)}`,
+        `DTEND:${fmtIso(end)}`,
+        `SUMMARY:${item.name}`,
+        `LOCATION:${item.location}`,
+        ...(item.type === 'restaurant' && item.meal ? [`DESCRIPTION:${item.meal} stop`] : []),
+        'END:VEVENT',
+      );
+    }
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function downloadIcs(itin: ItinDay[], tripLocation: string) {
+  const content = buildIcs(itin, tripLocation);
+  const blob = new Blob([content], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${tripLocation.replace(/[^a-zA-Z0-9]/g, '_')}_trip.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function openAllInGoogleCalendar(itin: ItinDay[]) {
+  const allItems: Array<{ item: ScheduleItem; date: string }> = [];
+  for (const day of itin) {
+    for (const item of day.schedule) allItems.push({ item, date: day.date });
+  }
+  for (const { item, date } of allItems) {
+    window.open(buildGoogleCalendarUrl(item, date), '_blank');
+    await new Promise(r => setTimeout(r, 400));
+  }
+}
 
 const HOUR_HEIGHT = 64;
 const CALENDAR_START = 7;
@@ -23,6 +103,9 @@ export default function MyTrip() {
   const state = location.state as { itin: ItinDay[]; tripLocation: string } | null;
   const [selected, setSelected] = useState<SelectedEvent | null>(null);
   const [weekIndex, setWeekIndex] = useState(0);
+  const [calMenuOpen, setCalMenuOpen] = useState(false);
+  const [addingToGcal, setAddingToGcal] = useState(false);
+  const calMenuRef = useRef<HTMLDivElement>(null);
 
   if (!state?.itin) {
     return (
@@ -38,6 +121,17 @@ export default function MyTrip() {
   }
 
   const { itin, tripLocation } = state;
+
+  const handleGoogleCalendar = useCallback(async () => {
+    setCalMenuOpen(false);
+    setAddingToGcal(true);
+    try { await openAllInGoogleCalendar(itin); } finally { setAddingToGcal(false); }
+  }, [itin]);
+
+  const handleDownloadIcs = useCallback(() => {
+    setCalMenuOpen(false);
+    downloadIcs(itin, tripLocation);
+  }, [itin, tripLocation]);
   const totalHeight = (CALENDAR_END - CALENDAR_START) * HOUR_HEIGHT;
 
   // Chunk itinerary into weeks of 7
@@ -327,6 +421,93 @@ export default function MyTrip() {
             )}
           </div>
 
+        </div>
+      </div>
+
+      {/* Sticky Add to Calendar bar */}
+      <div
+        style={{
+          position: 'sticky',
+          bottom: 0,
+          background: 'var(--color-bg-primary)',
+          borderTop: '1px solid var(--color-border)',
+          padding: '12px 24px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          zIndex: 40,
+        }}
+      >
+        <div ref={calMenuRef} style={{ position: 'relative' }}>
+          <button
+            className="sg-btn px-6 py-3 text-sm flex items-center gap-2"
+            onClick={() => setCalMenuOpen(o => !o)}
+            disabled={addingToGcal}
+          >
+            {addingToGcal ? (
+              <>
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Opening…
+              </>
+            ) : (
+              'Add to Calendar'
+            )}
+          </button>
+
+          {calMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '110%',
+                right: 0,
+                background: 'var(--color-card)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 14,
+                boxShadow: 'var(--shadow-card)',
+                overflow: 'hidden',
+                minWidth: 200,
+              }}
+            >
+              <button
+                onClick={handleGoogleCalendar}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px 18px',
+                  textAlign: 'left',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-hover-bg)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                Google Calendar
+              </button>
+              <div style={{ height: 1, background: 'var(--color-border)' }} />
+              <button
+                onClick={handleDownloadIcs}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px 18px',
+                  textAlign: 'left',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-hover-bg)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                Download .ics
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </ScreenContainer>

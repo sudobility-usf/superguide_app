@@ -58,8 +58,17 @@ export default function LandingPage() {
               </button>
             </LocalizedLink>
             <LocalizedLink to="/histories">
-              <button className="sg-pill px-8 py-3.5 text-sm font-semibold transition-colors"
-                style={{ color: '#7A6A50' }}>
+              <button
+                className="sg-pill px-8 py-3.5 text-sm font-semibold transition-colors"
+                style={{
+                  color: '#7A6A50',
+                  borderRadius: 14,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
                 My Trips
               </button>
             </LocalizedLink>
@@ -67,9 +76,9 @@ export default function LandingPage() {
         </div>
 
         {/* Feature cards */}
-        <div className="grid md:grid-cols-3 gap-5 max-w-4xl mx-auto pb-28">
+        <div className="grid md:grid-cols-3 gap-5 max-w-4xl mx-auto pb-28 justify-items-center">
           {features.map((f, i) => (
-            <div key={i} className="sg-card p-7 transition-transform hover:scale-[1.02]">
+            <div key={i} className="sg-card p-7 transition-transform hover:scale-[1.02] w-full text-center flex flex-col items-center">
               <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg mb-5"
                 style={{ background: 'rgba(107,122,78,0.15)', color: '#6B7A4E' }}>
                 {f.icon}

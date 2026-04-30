@@ -121,3 +121,11 @@ Uses `@sudobility/building_blocks` for shared shell components (TopBar, LoginPag
 - Firebase configuration requires all `VITE_FIREBASE_*` environment variables to be set; missing any will break authentication
 - `@sudobility/building_blocks` provides shared UI components -- check there before creating duplicate components
 
+## Task Workflow
+
+- Read `plans/ACTIVE_TASK.md` before starting work.
+- If `plans/ACTIVE_TASK.md` says `idle`, do not self-assign from the backlog.
+- Use `plans/STATUS.md` for progress notes, blockers, verification results, and handoff context.
+- Use `plans/WORK_QUEUE.md` for backlog management only; keep the live assignment in `plans/ACTIVE_TASK.md`.
+- Treat `plans/IMPROVEMENTS.md` and `plans/START.md` as reference material, not the source of truth for the current assignment.
+- Assume only one active task in this repo unless `plans/ACTIVE_TASK.md` explicitly says otherwise.
