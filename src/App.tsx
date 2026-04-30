@@ -12,7 +12,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const GetStartedPage = lazy(() => import('./pages/GetStartedPage'));
 const MyTripPage = lazy(() => import('./pages/MyTrip'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
-const DocsPage = lazy(() => import('./pages/DocsPage'));
+const EatsPage = lazy(() => import('./pages/EatsPage'));
 const HistoriesPage = lazy(() => import('./pages/HistoriesPage'));
 const HistoryDetailPage = lazy(() => import('./pages/HistoryDetailPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -59,7 +59,7 @@ function AppRoutes() {
               <Route path="login" element={<LoginPage />} />
               <Route path="get-started" element={<GetStartedPage />} />
               <Route path="my-trip" element={<MyTripPage />} />
-              <Route path="docs" element={<DocsPage />} />
+              <Route path="eats" element={<EatsPage />} />
               <Route
                 path="histories"
                 element={

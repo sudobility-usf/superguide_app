@@ -7,7 +7,7 @@ import {
 } from '@sudobility/building_blocks';
 import { AuthAction } from '@sudobility/auth-components';
 import type { ComponentType } from 'react';
-import { DocumentTextIcon, ClockIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { BuildingStorefrontIcon, ClockIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { CONSTANTS, SUPPORTED_LANGUAGES, isLanguageSupported } from '../../config/constants';
 import LocalizedLink from './LocalizedLink';
@@ -65,10 +65,10 @@ export function useTopBarConfig(): TopBarConfig {
   const menuItems: MenuItemConfig[] = useMemo(() => {
     const items: MenuItemConfig[] = [
       {
-        id: 'docs',
-        label: t('nav.docs'),
-        icon: DocumentTextIcon,
-        href: '/docs',
+        id: 'eats',
+        label: 'Eats',
+        icon: BuildingStorefrontIcon,
+        href: '/eats',
       },
       {
         id: 'histories',
